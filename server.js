@@ -6,9 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname, "data");
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "availability.json");
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST; // z.B. 127.0.0.1 hinter einem Reverse-Proxy
 
 // { "YYYY-MM-DD": ["Name", ...], ... }
 let availability = {};
@@ -81,6 +82,6 @@ function broadcast(message) {
   }
 }
 
-server.listen(PORT, () => {
-  console.log(`Calvo läuft auf http://localhost:${PORT}`);
+server.listen(PORT, HOST, () => {
+  console.log(`Calvo läuft auf http://${HOST || "localhost"}:${PORT}`);
 });
