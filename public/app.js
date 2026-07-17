@@ -1,8 +1,20 @@
 const NAME_KEY = "calvo:name";
+const CACHE_KEY = "calvo:cache";
+const PENDING_KEY = "calvo:pending";
 
-let availability = {}; // { "YYYY-MM-DD": ["Name", ...] }
+let serverAvailability = {}; // letzter bekannter Serverstand { "YYYY-MM-DD": ["Name", ...] }
+let availability = {}; // Anzeige: Serverstand + eigene, noch nicht übertragene Änderungen
+let desired = new Map(); // "YYYY-MM-DD" -> gewünschte eigene Teilnahme, noch nicht vom Server bestätigt
 let monthsShown = 6;
 let pendingDate = null;
+
+let ws = null;
+let wsConnected = true; // optimistisch, damit das Banner beim Laden nicht aufblitzt
+let syncFailed = false;
+let syncing = false;
+let syncTimer = null;
+let loadTimer = null;
+let reconnectTimer = null;
 
 const calendarEl = document.getElementById("calendar");
 const bestListEl = document.getElementById("best-list");
@@ -13,6 +25,7 @@ const nameInput = document.getElementById("name-input");
 const moreBtn = document.getElementById("more-months");
 const userInfoEl = document.getElementById("user-info");
 const userNameEl = document.getElementById("user-name");
+const statusEl = document.getElementById("status");
 
 const monthFmt = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" });
 const bestDateFmt = new Intl.DateTimeFormat("de-DE", {
@@ -39,6 +52,73 @@ function parseKey(key) {
 function todayKey() {
   const t = new Date();
   return dateKey(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+function loadStored() {
+  try {
+    serverAvailability = JSON.parse(localStorage.getItem(CACHE_KEY)) || {};
+  } catch {
+    serverAvailability = {};
+  }
+  try {
+    const stored = JSON.parse(localStorage.getItem(PENDING_KEY)) || {};
+    desired = new Map(Object.entries(stored).map(([date, want]) => [date, Boolean(want)]));
+  } catch {
+    desired = new Map();
+  }
+}
+
+function saveStored() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(serverAvailability));
+    localStorage.setItem(PENDING_KEY, JSON.stringify(Object.fromEntries(desired)));
+  } catch {
+    // z.B. Speicher voll – dann eben ohne Cache
+  }
+}
+
+// Anzeige-Stand aus Serverstand + eigenen offenen Änderungen ableiten.
+// Änderungen, die der Server inzwischen bestätigt hat, sind damit erledigt.
+function recompute() {
+  const name = getName();
+  availability = {};
+  for (const [date, names] of Object.entries(serverAvailability)) {
+    availability[date] = [...names];
+  }
+  if (!name) {
+    desired.clear();
+    return;
+  }
+  for (const [date, want] of [...desired]) {
+    const names = availability[date] || [];
+    const has = names.includes(name);
+    if (has === want) {
+      desired.delete(date);
+      continue;
+    }
+    if (want) {
+      names.push(name);
+      availability[date] = names;
+    } else {
+      const rest = names.filter((n) => n !== name);
+      if (rest.length > 0) {
+        availability[date] = rest;
+      } else {
+        delete availability[date];
+      }
+    }
+  }
+}
+
+function refresh() {
+  recompute();
+  saveStored();
+  render();
+  updateStatus();
+}
+
+function updateStatus() {
+  statusEl.classList.toggle("hidden", wsConnected && !syncFailed);
 }
 
 function render() {
@@ -161,26 +241,54 @@ function onDayClick(key) {
     openModal();
     return;
   }
-  toggle(key);
+  flip(key);
 }
 
-async function toggle(date) {
-  try {
-    const res = await fetch("/api/toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: getName(), date }),
-    });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const { names } = await res.json();
-    if (names.length > 0) {
-      availability[date] = names;
-    } else {
-      delete availability[date];
+// Sofort lokal umschalten, Übertragung an den Server läuft im Hintergrund.
+function flip(date) {
+  const name = getName();
+  const names = availability[date] || [];
+  desired.set(date, !names.includes(name));
+  refresh();
+  syncPending();
+}
+
+// Offene Änderungen mit dem Server abgleichen; bei Fehler später erneut versuchen.
+async function syncPending() {
+  if (syncing) return;
+  syncing = true;
+  clearTimeout(syncTimer);
+  const name = getName();
+  let failed = false;
+
+  for (const [date, want] of [...desired]) {
+    const serverNames = serverAvailability[date] || [];
+    if (serverNames.includes(name) === want) continue; // erledigt recompute() beim refresh()
+    try {
+      const res = await fetch("/api/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, date }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { names } = await res.json();
+      if (names.length > 0) {
+        serverAvailability[date] = names;
+      } else {
+        delete serverAvailability[date];
+      }
+    } catch (err) {
+      console.error("Übertragung fehlgeschlagen, versuche es später erneut:", err);
+      failed = true;
+      break;
     }
-    render();
-  } catch (err) {
-    console.error("Toggle fehlgeschlagen:", err);
+  }
+
+  syncing = false;
+  syncFailed = failed;
+  refresh();
+  if (failed || desired.size > 0) {
+    syncTimer = setTimeout(syncPending, 3000);
   }
 }
 
@@ -199,7 +307,7 @@ nameForm.addEventListener("submit", (event) => {
   const date = pendingDate;
   pendingDate = null;
   render();
-  if (date) toggle(date);
+  if (date) flip(date);
 });
 
 moreBtn.addEventListener("click", () => {
@@ -208,28 +316,62 @@ moreBtn.addEventListener("click", () => {
 });
 
 async function load() {
-  const res = await fetch("/api/availability");
-  availability = await res.json();
-  render();
+  clearTimeout(loadTimer);
+  try {
+    const res = await fetch("/api/availability");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    serverAvailability = await res.json();
+    refresh();
+    syncPending();
+  } catch (err) {
+    console.error("Laden fehlgeschlagen, versuche es später erneut:", err);
+    loadTimer = setTimeout(load, 3000);
+  }
 }
 
 function connect() {
+  if (ws && ws.readyState !== WebSocket.CLOSED) return;
+  clearTimeout(reconnectTimer);
   const proto = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${proto}://${location.host}/ws`);
-  ws.addEventListener("open", load); // beim (Re-)Connect Stand neu laden
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.addEventListener("open", () => {
+    wsConnected = true;
+    updateStatus();
+    load(); // beim (Re-)Connect Stand neu laden
+  });
   ws.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === "update") {
       if (msg.names.length > 0) {
-        availability[msg.date] = msg.names;
+        serverAvailability[msg.date] = msg.names;
       } else {
-        delete availability[msg.date];
+        delete serverAvailability[msg.date];
       }
-      render();
+      refresh();
     }
   });
-  ws.addEventListener("close", () => setTimeout(connect, 2000));
+  ws.addEventListener("close", () => {
+    wsConnected = false;
+    updateStatus();
+    reconnectTimer = setTimeout(connect, 2000);
+  });
 }
 
-render();
+// Mobile Browser kappen Verbindungen im Hintergrund – beim Zurückkehren sofort
+// neu verbinden und offene Änderungen übertragen, statt auf Timer zu warten.
+function wake() {
+  connect();
+  if (ws && ws.readyState === WebSocket.OPEN) load();
+  syncPending();
+}
+
+window.addEventListener("online", wake);
+window.addEventListener("focus", wake);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) wake();
+});
+
+loadStored();
+refresh();
+load();
 connect();
