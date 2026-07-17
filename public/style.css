@@ -87,6 +87,7 @@ main {
   display: flex;
   align-items: center;
   justify-content: center;
+  touch-action: manipulation;
 }
 
 .day:hover:not(:disabled) {
@@ -147,6 +148,7 @@ main {
   padding: 0.6rem 1.2rem;
   font: inherit;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 #more-months:hover {
