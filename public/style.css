@@ -264,39 +264,53 @@ main {
   cursor: pointer;
 }
 
-.toasts {
-  position: fixed;
-  top: 12px;
+.day.flash {
+  animation: day-flash 5s ease forwards;
+}
+
+@keyframes day-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+  8% {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.55);
+  }
+  85% {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+.vote-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  max-width: calc(100% - 2rem);
-  z-index: 20;
-  pointer-events: none;
-}
-
-.toast {
   background: #1f2933;
   color: #fff;
-  border-radius: 8px;
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  animation: toast-in 0.2s ease-out;
-  transition: opacity 0.3s;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 5;
+  animation: vote-fade 5s ease forwards;
 }
 
-@keyframes toast-in {
-  from {
+@keyframes vote-fade {
+  0% {
     opacity: 0;
-    transform: translateY(-6px);
   }
-  to {
+  8% {
     opacity: 1;
-    transform: none;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

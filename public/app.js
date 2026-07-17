@@ -26,7 +26,6 @@ const moreBtn = document.getElementById("more-months");
 const userInfoEl = document.getElementById("user-info");
 const userNameEl = document.getElementById("user-name");
 const statusEl = document.getElementById("status");
-const toastsEl = document.getElementById("toasts");
 
 const monthFmt = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" });
 const bestDateFmt = new Intl.DateTimeFormat("de-DE", {
@@ -35,12 +34,9 @@ const bestDateFmt = new Intl.DateTimeFormat("de-DE", {
   month: "long",
   year: "numeric",
 });
-const toastDateFmt = new Intl.DateTimeFormat("de-DE", {
-  weekday: "short",
-  day: "numeric",
-  month: "long",
-});
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+
+let recentVotes = new Map(); // "YYYY-MM-DD" -> { names: [...], timer } für kurz eingeblendete Labels
 
 function getName() {
   return localStorage.getItem(NAME_KEY) || "";
@@ -202,6 +198,15 @@ function renderCalendar() {
         cell.title = names.join(", ");
       }
 
+      const recent = recentVotes.get(key);
+      if (recent) {
+        cell.classList.add("flash");
+        const label = document.createElement("span");
+        label.className = "vote-label";
+        label.textContent = recent.names.join(", ");
+        cell.appendChild(label);
+      }
+
       cell.addEventListener("click", () => onDayClick(key));
       grid.appendChild(cell);
     }
@@ -298,26 +303,22 @@ async function syncPending() {
   }
 }
 
-function showToast(text) {
-  const el = document.createElement("div");
-  el.className = "toast";
-  el.textContent = text;
-  toastsEl.appendChild(el);
-  setTimeout(() => {
-    el.style.opacity = "0";
-    setTimeout(() => el.remove(), 300);
-  }, 4000);
-}
-
-// Meldet, wenn sich jemand anderes neu für einen Tag eingetragen hat.
+// Blendet am Tag kurz ein Label ein, wenn sich jemand anderes neu eingetragen hat.
 function notifyNewVotes(date, names) {
   const before = serverAvailability[date] || [];
   const myName = getName();
-  for (const n of names) {
-    if (n !== myName && !before.includes(n)) {
-      showToast(`✅ ${n} hat sich für ${toastDateFmt.format(parseKey(date))} eingetragen`);
-    }
-  }
+  const added = names.filter((n) => n !== myName && !before.includes(n));
+  if (added.length === 0) return;
+
+  const entry = recentVotes.get(date);
+  if (entry) clearTimeout(entry.timer);
+  recentVotes.set(date, {
+    names: entry ? [...new Set([...entry.names, ...added])] : added,
+    timer: setTimeout(() => {
+      recentVotes.delete(date);
+      render();
+    }, 5100), // etwas länger als die 5s der CSS-Animation
+  });
 }
 
 function openModal() {
