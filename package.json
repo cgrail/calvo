@@ -1,0 +1,13 @@
+{
+  "name": "calvo",
+  "version": "1.0.0",
+  "description": "Calendar Voting – finde einen Termin, an dem alle Zeit haben",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "ws": "^8.18.0"
+  }
+}

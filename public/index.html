@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calvo – Terminfindung</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📅</text></svg>" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>📅 Calvo</h1>
+    <p class="tagline">Klicke auf die Tage, an denen du Zeit hast – alle sehen die Änderungen sofort.</p>
+    <p id="user-info" class="user-info hidden">
+      Angemeldet als <strong id="user-name"></strong>
+    </p>
+  </header>
+
+  <main>
+    <section id="calendar" aria-label="Kalender"></section>
+
+    <div class="more-wrap">
+      <button id="more-months" type="button">3 weitere Monate anzeigen</button>
+    </div>
+
+    <section id="best" aria-label="Beste Termine">
+      <h2>Beste Termine</h2>
+      <p id="best-empty">Noch keine Einträge – klicke auf einen Tag im Kalender.</p>
+      <ol id="best-list"></ol>
+    </section>
+  </main>
+
+  <div id="modal" class="modal hidden">
+    <form id="name-form" class="modal-box">
+      <h2>Wie heißt du?</h2>
+      <p>Dein Name wird bei deinen Terminen angezeigt und auf diesem Gerät gespeichert.</p>
+      <input
+        id="name-input"
+        type="text"
+        maxlength="40"
+        placeholder="Dein Name"
+        autocomplete="name"
+        required
+      />
+      <button type="submit">Speichern</button>
+    </form>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

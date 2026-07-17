@@ -1,0 +1,274 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f4f5f7;
+  color: #1f2933;
+}
+
+header {
+  text-align: center;
+  padding: 1.5rem 1rem 0.5rem;
+}
+
+header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.8rem;
+}
+
+.tagline {
+  margin: 0;
+  color: #52606d;
+}
+
+.user-info {
+  margin: 0.5rem 0 0;
+  color: #52606d;
+  font-size: 0.9rem;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+#calendar {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  gap: 1.25rem;
+}
+
+.month {
+  min-width: 0;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.month h3 {
+  margin: 0 0 0.75rem;
+  text-align: center;
+  font-size: 1.05rem;
+  text-transform: capitalize;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: 1.5rem;
+  grid-auto-rows: 2.75rem;
+  gap: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7b8794;
+  padding-bottom: 4px;
+}
+
+.day {
+  position: relative;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: #f8f9fb;
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day:hover:not(:disabled) {
+  border-color: #2563eb;
+}
+
+.day.past {
+  color: #cbd2d9;
+  background: transparent;
+  cursor: default;
+}
+
+.day.today {
+  border-color: #7b8794;
+  font-weight: 700;
+}
+
+.day.has-votes {
+  background: #dbeafe;
+}
+
+.day.mine {
+  background: #2563eb;
+  color: #fff;
+}
+
+.day.mine .badge {
+  background: #fff;
+  color: #2563eb;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.more-wrap {
+  text-align: center;
+  margin: 1.5rem 0;
+}
+
+#more-months {
+  background: #fff;
+  border: 1px solid #cbd2d9;
+  border-radius: 8px;
+  padding: 0.6rem 1.2rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+#more-months:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+#best {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+#best h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.2rem;
+}
+
+#best-empty {
+  color: #7b8794;
+  margin: 0;
+}
+
+#best-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+#best-list li {
+  display: grid;
+  grid-template-columns: minmax(200px, auto) auto 1fr;
+  gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+}
+
+#best-list li:nth-child(even) {
+  background: #f8f9fb;
+}
+
+#best-list li.top {
+  background: #dbeafe;
+}
+
+#best-list li.top .best-count {
+  color: #1d4ed8;
+}
+
+.best-date {
+  font-weight: 600;
+}
+
+.best-count {
+  font-size: 0.85rem;
+  color: #52606d;
+  white-space: nowrap;
+}
+
+.best-names {
+  color: #52606d;
+  font-size: 0.9rem;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.modal-box {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modal-box h2 {
+  margin: 0;
+}
+
+.modal-box p {
+  margin: 0;
+  color: #52606d;
+  font-size: 0.9rem;
+}
+
+.modal-box input {
+  font: inherit;
+  padding: 0.6rem;
+  border: 1px solid #cbd2d9;
+  border-radius: 8px;
+}
+
+.modal-box button[type="submit"] {
+  font: inherit;
+  padding: 0.6rem;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  cursor: pointer;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  #best-list li {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
+}
