@@ -26,6 +26,7 @@ const moreBtn = document.getElementById("more-months");
 const userInfoEl = document.getElementById("user-info");
 const userNameEl = document.getElementById("user-name");
 const statusEl = document.getElementById("status");
+const toastsEl = document.getElementById("toasts");
 
 const monthFmt = new Intl.DateTimeFormat("de-DE", { month: "long", year: "numeric" });
 const bestDateFmt = new Intl.DateTimeFormat("de-DE", {
@@ -33,6 +34,11 @@ const bestDateFmt = new Intl.DateTimeFormat("de-DE", {
   day: "numeric",
   month: "long",
   year: "numeric",
+});
+const toastDateFmt = new Intl.DateTimeFormat("de-DE", {
+  weekday: "short",
+  day: "numeric",
+  month: "long",
 });
 const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
 
@@ -292,6 +298,28 @@ async function syncPending() {
   }
 }
 
+function showToast(text) {
+  const el = document.createElement("div");
+  el.className = "toast";
+  el.textContent = text;
+  toastsEl.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = "0";
+    setTimeout(() => el.remove(), 300);
+  }, 4000);
+}
+
+// Meldet, wenn sich jemand anderes neu für einen Tag eingetragen hat.
+function notifyNewVotes(date, names) {
+  const before = serverAvailability[date] || [];
+  const myName = getName();
+  for (const n of names) {
+    if (n !== myName && !before.includes(n)) {
+      showToast(`✅ ${n} hat sich für ${toastDateFmt.format(parseKey(date))} eingetragen`);
+    }
+  }
+}
+
 function openModal() {
   nameInput.value = getName();
   modalEl.classList.remove("hidden");
@@ -342,6 +370,7 @@ function connect() {
   ws.addEventListener("message", (event) => {
     const msg = JSON.parse(event.data);
     if (msg.type === "update") {
+      notifyNewVotes(msg.date, msg.names);
       if (msg.names.length > 0) {
         serverAvailability[msg.date] = msg.names;
       } else {
