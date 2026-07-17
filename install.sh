@@ -197,6 +197,32 @@ EOF
 systemctl daemon-reload
 systemctl enable --now calvo-update.timer
 
+# ---------- data backup: timestamped snapshots every 5 min ----------
+log "Installing data-backup timer (backup.sh)"
+BACKUP_OWNER="$(stat -c %U "$SRC_DIR")"
+cat > /etc/systemd/system/calvo-backup.service <<EOF
+[Unit]
+Description=calvo data backup (timestamped copy on change)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash $SRC_DIR/backup.sh
+EOF
+cat > /etc/systemd/system/calvo-backup.timer <<EOF
+[Unit]
+Description=calvo data backup check every 5 minutes
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable --now calvo-backup.timer
+
 # ---------- summary ----------
 sleep 2
 log "Done"
@@ -212,6 +238,9 @@ cat <<EOF
   firewall     : untouched — 80/443 are already open from the
                  mech-vs-mech setup; calvo's port is loopback-only
   data         : $APP_HOME/data/availability.json (survives redeploys)
+  backups      : ~$BACKUP_OWNER/termin/data/availability-<timestamp>.json —
+                 checked every 5 min, written only when the data changed
+                 (calvo-backup.timer → backup.sh)
   logs         : journalctl -u calvo -f
   quick check  : curl -sI https://$DOMAIN/ | head -1
   updates      : auto — pushes to origin/main go live within ~5 min

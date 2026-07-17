@@ -32,4 +32,7 @@ Then point a plain **un-proxied** A/AAAA record for the domain at the box.
 - **Updates**: automatic — a systemd timer runs [update.sh](update.sh) every
   5 minutes and deploys whatever lands on `origin/main`. Manual: `sudo ./update.sh --force`.
 - **Data**: `/var/lib/calvo/data/availability.json` — survives redeploys and restarts.
+- **Backups**: a timer runs [backup.sh](backup.sh) every 5 minutes; whenever the data
+  changed, a timestamped copy lands in `~/termin/data/availability-<timestamp>.json`
+  (home of the user owning the server checkout).
 - **Logs**: `journalctl -u calvo -f`
